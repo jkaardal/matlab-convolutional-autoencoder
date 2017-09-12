@@ -5,15 +5,16 @@ function dcost = dcautoCost2(p, data, num_conv, nt, patches, extra_hidden)
 %
 
 
-    [nsamples, num_hidden] = size(data);
-    nf = num_hidden/nt;
+    [nsamples, ndim] = size(data);
+    nf = ndim/nt;
+    num_hidden = patches(1).Nx*patches(2).Ny;
 
-    W = p(1:num_conv*(patches(1).Nx*patches(2).Ny+1));
-    W = reshape(W, [num_conv length(W)/num_conv]);
-    
+    W = p(1:num_conv*(num_hidden+1));
+    W = reshape(W, [num_conv length(W)/num_conv]);    
+
     if isempty(extra_hidden) || extra_hidden(1) <= 0
-        R = p(num_conv*(patches(1).Nx*patches(2).Ny+1)+1:num_conv*(patches(1).Nx*patches(2).Ny+1)+num_hidden*(num_conv*length(patches)+1));
-        R = reshape(R, [num_hidden length(R)/num_hidden]);
+        R = p(num_conv*(num_hidden+1)+1:num_conv*(num_hidden+1)+ndim*(num_conv*numel(patches)+1));
+        R = reshape(R, [ndim length(R)/ndim]);
     else
         extra_layers = extra_hidden(1);
         extra_num = extra_hidden(2);
@@ -32,9 +33,9 @@ function dcost = dcautoCost2(p, data, num_conv, nt, patches, extra_hidden)
                 H{j} = reshape(H{j}, [extra_num length(H{j})/extra_num]);
             end
         end
-        index = index(end)+1:index(end)+num_hidden*(extra_num+1);
+        index = index(end)+1:index(end)+ndim*(extra_num+1);
         R = p(index);
-        R = reshape(R, [num_hidden length(R)/num_hidden]);
+        R = reshape(R, [ndim length(R)/ndim]);
     end
 
     Z = zeros(size(W,1)*length(patches),nsamples);
@@ -83,7 +84,7 @@ function dcost = dcautoCost2(p, data, num_conv, nt, patches, extra_hidden)
         if extra_layers == 1
             dhb{1} = tmp(:,2:end)'*drb.*(Z.*(Z-1));
         else
-            dhb{extra_layers} = tmp(:,2:end)'*drb.*(Y{extra_layers-1}.*(Y{extra_layers}-1));
+            dhb{extra_layers} = tmp(:,2:end)'*drb.*(Y{extra_layers-1}.*(Y{extra_layers-1}-1));
             for j=extra_layers-1:-1:2
                 tmp = H{j};
                 dhb{j} = tmp(:,2:end)'*dhb{j+1}.*(Y{j-1}.*(Y{j-1}-1));

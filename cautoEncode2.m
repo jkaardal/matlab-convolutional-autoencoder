@@ -1,5 +1,5 @@
-function cost = cautoCost2(p, data, num_conv, nt, patches, extra_hidden)
-% cautoCost2.m
+function enc = cautoEncode2(p, data, num_conv, nt, patches, extra_hidden)
+% cautoEncode2.m
 %   A cost function for training a 2D convolutional or translationally invariant autoencoder with an arbitrary number of logistic hidden layers
 %   The accompanying gradient for optimization is dcautoCost2.m
 %
@@ -29,30 +29,35 @@ function cost = cautoCost2(p, data, num_conv, nt, patches, extra_hidden)
     W = p(1:num_conv*(num_hidden+1));
     W = reshape(W, [num_conv length(W)/num_conv]);    
 
-    if isempty(extra_hidden) || extra_hidden(1) <= 0
-        R = p(num_conv*(num_hidden+1)+1:num_conv*(num_hidden+1)+ndim*(num_conv*numel(patches)+1));
-	R = reshape(R, [ndim length(R)/ndim]);
-    else
-        extra_layers = extra_hidden(1);
-        extra_num = extra_hidden(2);
-        H = cell(1,extra_layers);
-        if extra_layers == 1
-            index = num_conv*(patches(1).Nx*patches(2).Ny+1)+1:num_conv*(patches(1).Nx*patches(2).Ny+1)+extra_num*(num_conv*length(patches)+1);
-            H{1} = p(index);
-            H{1} = reshape(H{1}, [extra_num length(H{1})/extra_num]);
-        else
-            index = num_conv*(patches(1).Nx*patches(2).Ny+1)+1:num_conv*(patches(1).Nx*patches(2).Ny+1)+extra_num*(num_conv*length(patches)+1);                
-            H{1} = p(index);
-            H{1} = reshape(H{1}, [extra_num length(H{1})/extra_num]);
-            for j=2:extra_layers
-                index = index(end)+1:index(end)+extra_num*(extra_num+1);
-                H{j} = p(index);
-                H{j} = reshape(H{j}, [extra_num length(H{j})/extra_num]);
+    if numel(p) > numel(W)
+        if isempty(extra_hidden) || extra_hidden(1) <= 0
+            R = p(num_conv*(num_hidden+1)+1:num_conv*(num_hidden+1)+ndim*(num_conv*numel(patches)+1));
+	    R = reshape(R, [ndim length(R)/ndim]);
+	else
+            extra_layers = extra_hidden(1);
+            extra_num = extra_hidden(2);
+            H = cell(1,extra_layers);
+            if extra_layers == 1
+                index = num_conv*(patches(1).Nx*patches(2).Ny+1)+1:num_conv*(patches(1).Nx*patches(2).Ny+1)+extra_num*(num_conv*length(patches)+1);
+		H{1} = p(index);
+		H{1} = reshape(H{1}, [extra_num length(H{1})/extra_num]);
+            else
+                index = num_conv*(patches(1).Nx*patches(2).Ny+1)+1:num_conv*(patches(1).Nx*patches(2).Ny+1)+extra_num*(num_conv*length(patches)+1);                
+		H{1} = p(index);
+		H{1} = reshape(H{1}, [extra_num length(H{1})/extra_num]);
+		for j=2:extra_layers
+                    index = index(end)+1:index(end)+extra_num*(extra_num+1);
+                    H{j} = p(index);
+                    H{j} = reshape(H{j}, [extra_num length(H{j})/extra_num]);
+		end
             end
-        end
-        index = index(end)+1:index(end)+ndim*(extra_num+1);
-        R = p(index);
-        R = reshape(R, [ndim length(R)/ndim]);
+            index = index(end)+1:index(end)+ndim*(extra_num+1);
+            R = p(index);
+            R = reshape(R, [ndim length(R)/ndim]);
+	end
+    else
+        H = cell();
+	R = [];
     end
 
     Z = zeros(size(W,1)*length(patches),nsamples);
@@ -79,18 +84,28 @@ function cost = cautoCost2(p, data, num_conv, nt, patches, extra_hidden)
     end
     
     if isempty(extra_hidden) || extra_hidden(1) <= 0
-        x = repmat(R(:,1), [1 nsamples]) + R(:,2:end)*Z;
+        if ~isempty(R) && size(R, 1) < size(W, 1)
+            enc = repmat(R(:,1), [1 nsamples]) + R(:,2:end)*Z;
+	else
+	    enc = Z;
+	end
     else
-        Y = cell(1,extra_layers);
-        tmp = H{1};
-        Y{1} = 1./(1+exp( repmat(tmp(:,1), [1 nsamples]) + tmp(:,2:end)*Z ));
-        for j=2:extra_layers
-            tmp = H{j};
-            Y{j} = 1./(1+exp( repmat(tmp(:,1), [1 nsamples]) + tmp(:,2:end)*Y{j-1} ));
-        end
-        x = repmat(R(:,1), [1 nsamples]) + R(:,2:end)*Y{extra_layers};
+        if ~isempty(H)
+            Y = cell(1,extra_layers);
+            tmp = H{1};
+            Y{1} = 1./(1+exp( repmat(tmp(:,1), [1 nsamples]) + tmp(:,2:end)*Z ));
+            for j=2:extra_layers
+                tmp = H{j};
+		Y{j} = 1./(1+exp( repmat(tmp(:,1), [1 nsamples]) + tmp(:,2:end)*Y{j-1} ));
+            end
+	    if ~isempty(R) && size(R, 1) < numel(Y{extra_layers})
+                enc = repmat(R(:,1), [1 nsamples]) + R(:,2:end)*Y{extra_layers};
+	    else
+	        enc = Y{extra_layers};
+	    end
+	end
     end
 
-    cost = 0.5*sum(sum((data-x').^2))/size(data,1);
+    enc = enc';
 
 end

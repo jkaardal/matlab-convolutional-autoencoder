@@ -1,4 +1,4 @@
-function cost = cautoCost2(p, data, num_conv, nt, patches, extra_hidden)
+function x = cautoPredict2(p, data, num_conv, nt, patches, extra_hidden)
 % cautoCost2.m
 %   A cost function for training a 2D convolutional or translationally invariant autoencoder with an arbitrary number of logistic hidden layers
 %   The accompanying gradient for optimization is dcautoCost2.m
@@ -91,6 +91,6 @@ function cost = cautoCost2(p, data, num_conv, nt, patches, extra_hidden)
         x = repmat(R(:,1), [1 nsamples]) + R(:,2:end)*Y{extra_layers};
     end
 
-    cost = 0.5*sum(sum((data-x').^2))/size(data,1);
+    x = x';
 
 end
