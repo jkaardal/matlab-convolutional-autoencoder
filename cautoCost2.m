@@ -5,7 +5,7 @@ function cost = cautoCost2(p, data, num_conv, nt, patches, extra_hidden)
 %
 %   Variable definitions: 
 %      p -- network parameters; vector containing unrolled matrices of the following:
-%           W: the convolution layer bias and weights (in that order); dimensions num_conv X size(data,2)
+%           W: the convolution layer bias and weights (in that order); dimensions num_conv X size(data,2)+1
 %           H: extra hidden layers bias and weights (bias and weights grouped by layer); dimensions extra_hidden(2) X (num_conv*length(patches)+1 OR extra_hidden(2)+1)
 %           R: the construction layer bias and weights; dimensions size(data,2) X (num_conv*length(patches)+1 OR extra_hidden(2)+1)
 %           Reshaping each into a vector and concatenating in the order of the list above is the definition of p. The column dimensionality is the dimension of the prior layer output plus a bias term.
